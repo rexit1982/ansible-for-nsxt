@@ -150,21 +150,23 @@ def get_fabric_compute_manager_params(args=None):
     return args
 
 def get_thumb(module):
+    context = ssl.SSLContext()
+    context.check_hostname = False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(10)
-    wrappedSocket = ssl.wrap_socket(sock)
+    wrapped_socket = context.wrap_socket(sock, server_hostname=module.params['server'])
     try:
-      wrappedSocket.connect((module.params['server'], 443))
+      wrapped_socket.connect((module.params['server'], 443))
     except:
       module.fail_json(msg='Connection error while fatching thumbprint for server [%s].' % module.params['server'])
     else:
-      der_cert_bin = wrappedSocket.getpeercert(True)
-      pem_cert = ssl.DER_cert_to_PEM_cert(wrappedSocket.getpeercert(True))
+      der_cert_bin = wrapped_socket.getpeercert(True)
+      pem_cert = ssl.DER_cert_to_PEM_cert(wrapped_socket.getpeercert(True))
       print(pem_cert)
 
       #Thumbprint
       thumb_sha256 = hashlib.sha256(der_cert_bin).hexdigest()
-      wrappedSocket.close()
+      wrapped_socket.close()
       # The API call expects the Thumbprint in Uppercase. While the API call is fixed,
       # below is a quick fix
       thumbprint = ""

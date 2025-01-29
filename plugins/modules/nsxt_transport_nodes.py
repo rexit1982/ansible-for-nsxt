@@ -901,23 +901,25 @@ def check_for_update(module, manager_url, mgr_username, mgr_password, validate_c
     return False
 
 def get_api_cert_thumbprint(ip_address, module):
+    context = ssl.SSLContext()
+    context.check_hostname = False
     ip = ipaddress.ip_address(ip_address)
     if isinstance(ip, ipaddress.IPv4Address):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     elif isinstance(ip, ipaddress.IPv6Address):
         sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     sock.settimeout(1)
-    wrappedSocket = ssl.wrap_socket(sock)
+    wrapped_socket = context.wrap_socket(sock)
     try:
-        wrappedSocket.connect((ip_address, 443))
+        wrapped_socket.connect((ip_address, 443))
     except Exception as err:
         module.fail_json(msg='Failed to get node ID from ESXi host with IP {}. Error: {}'.format(ip_address, err))
     else:
-        der_cert_bin = wrappedSocket.getpeercert(True)
+        der_cert_bin = wrapped_socket.getpeercert(True)
         thumb_sha256 = hashlib.sha256(der_cert_bin).hexdigest()
         return thumb_sha256
     finally:
-        wrappedSocket.close()
+        wrapped_socket.close()
 
 
 def inject_vcenter_info(module, manager_url, mgr_username, mgr_password, validate_certs, transport_node_params):
